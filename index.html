@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Catch the Falling Stars</title>
+
+
+    <style>
+
+        /* Page design */
+
+        body {
+            margin: 0;
+            background: #080b16;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+
+        /* Game title */
+
+        h1 {
+            color: #ffd84d;
+            margin-top: 20px;
+            text-shadow: 0 0 10px #ffd84d;
+        }
+
+
+        /* Score and lives */
+
+        .game-info {
+            display: flex;
+            justify-content: center;
+            gap: 80px;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 15px;
+        }
+
+
+        #score {
+            color: #ffd84d;
+        }
+
+
+        #lives {
+            color: #ff6677;
+        }
+
+
+        /* Canvas */
+
+        canvas {
+            background: #10162b;
+            border: 2px solid #ffd84d;
+            max-width: 95%;
+        }
+
+
+        /* Game Over screen */
+
+        #gameOver {
+            display: none;
+
+            position: fixed;
+
+            top: 50%;
+            left: 50%;
+
+            transform: translate(-50%, -50%);
+
+            background: #11182e;
+
+            padding: 40px;
+
+            border: 2px solid #ffd84d;
+
+            border-radius: 15px;
+
+            box-shadow: 0 0 30px rgba(255, 216, 77, 0.4);
+        }
+
+
+        #gameOver h2 {
+            color: #ff6677;
+            font-size: 40px;
+            margin-top: 0;
+        }
+
+
+        /* Play Again button */
+
+        button {
+            background: #ffd84d;
+
+            border: none;
+
+            padding: 12px 25px;
+
+            border-radius: 8px;
+
+            font-size: 18px;
+
+            font-weight: bold;
+
+            cursor: pointer;
+        }
+
+
+        button:hover {
+            background: #ffe88a;
+        }
+
+
+        .instructions {
+            color: #9da6c7;
+            margin-top: 12px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- Game title -->
+
+    <h1>⭐ CATCH THE FALLING STARS ⭐</h1>
+
+
+    <!-- Score and Lives -->
+
+    <div class="game-info">
+
+        <div>
+            Score:
+            <span id="score">0</span>
+        </div>
+
+        <div>
+            Lives:
+            <span id="lives">3</span>
+            ❤️
+        </div>
+
+    </div>
+
+
+    <!-- Game canvas -->
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+
+    <!-- Controls information -->
+
+    <div class="instructions">
+        Use ← → arrow keys or move your mouse
+    </div>
+
+
+    <!-- Game Over -->
+
+    <div id="gameOver">
+
+        <h2>GAME OVER</h2>
+
+        <p>
+            Final Score:
+            <span id="finalScore">0</span>
+        </p>
+
+        <button id="playAgain">
+            Play Again
+        </button>
+
+    </div>
+
+
+    <script>
+
+
+        // ==========================================
+        // 1. GET HTML ELEMENTS
+        // ==========================================
+
+        const canvas =
+            document.getElementById("gameCanvas");
+
+        const ctx =
+            canvas.getContext("2d");
+
+
+        const scoreElement =
+            document.getElementById("score");
+
+        const livesElement =
+            document.getElementById("lives");
+
+        const gameOverElement =
+            document.getElementById("gameOver");
+
+        const finalScoreElement =
+            document.getElementById("finalScore");
+
+        const playAgainButton =
+            document.getElementById("playAgain");
+
+
+        // ==========================================
+        // 2. GAME VARIABLES
+        // ==========================================
+
+        let score = 0;
+
+        let lives = 3;
+
+        let gameRunning = true;
+
+        let fallingSpeed = 2.5;
+
+        let lastTime = 0;
+
+        let starTimer = 0;
+
+
+        // ==========================================
+        // 3. BASKET
+        // ==========================================
+
+        const basket = {
+
+            x: 350,
+
+            y: 540,
+
+            width: 100,
+
+            height: 30,
+
+            speed: 7
+
+        };
+
+
+        // ==========================================
+        // 4. KEYBOARD VARIABLES
+        // ==========================================
+
+        let leftPressed = false;
+
+        let rightPressed = false;
+
+
+        // ==========================================
+        // 5. STARS ARRAY
+        // ==========================================
+
+        let stars = [];
+
+
+        // ==========================================
+        // 6. CREATE A STAR
+        // ==========================================
+
+        function createStar() {
+
+            const star = {
+
+                x: Math.random() * 780 + 10,
+
+                y: -20,
+
+                size: 15,
+
+                speed: fallingSpeed + Math.random(),
+
+                rotation: 0
+
+            };
+
+            stars.push(star);
+
+        }
+
+
+        // ==========================================
+        // 7. DRAW A STAR
+        // ==========================================
+
+        function drawStar(star) {
+
+            ctx.save();
+
+
+            // Move drawing position
+
+            ctx.translate(star.x, star.y);
+
+
+            // Rotate star
+
+            ctx.rotate(star.rotation);
+
+
+            // Star color
+
+            ctx.fillStyle = "#ffd84d";
+
+
+            // Star glow
+
+            ctx.shadowColor = "#ffd84d";
+
+            ctx.shadowBlur = 15;
+
+
+            // Start star shape
+
+            ctx.beginPath();
+
+
+            for (let i = 0; i < 10; i++) {
+
+                let radius;
+
+                if (i % 2 === 0) {
+
+                    radius = star.size;
+
+                } else {
+
+                    radius = star.size * 0.4;
+
+                }
+
+
+                const angle =
+                    -Math.PI / 2 +
+                    i * Math.PI / 5;
+
+
+                const x =
+                    Math.cos(angle) * radius;
+
+                const y =
+                    Math.sin(angle) * radius;
+
+
+                if (i === 0) {
+
+                    ctx.moveTo(x, y);
+
+                } else {
+
+                    ctx.lineTo(x, y);
+
+                }
+
+            }
+
+
+            ctx.closePath();
+
+            ctx.fill();
+
+
+            ctx.restore();
+
+        }
+
+
+        // ==========================================
+        // 8. DRAW BASKET
+        // ==========================================
+
+        function drawBasket() {
+
+            ctx.fillStyle = "#55dfff";
+
+            ctx.shadowColor = "#55dfff";
+
+            ctx.shadowBlur = 10;
+
+
+            ctx.fillRect(
+
+                basket.x,
+
+                basket.y,
+
+                basket.width,
+
+                basket.height
+
+            );
+
+
+            ctx.shadowBlur = 0;
+
+        }
+
+
+        // ==========================================
+        // 9. UPDATE BASKET
+        // ==========================================
+
+        function updateBasket() {
+
+
+            // Move left
+
+            if (leftPressed) {
+
+                basket.x =
+                    basket.x - basket.speed;
+
+            }
+
+
+            // Move right
+
+            if (rightPressed) {
+
+                basket.x =
+                    basket.x + basket.speed;
+
+            }
+
+
+            // Left boundary
+
+            if (basket.x < 0) {
+
+                basket.x = 0;
+
+            }
+
+
+            // Right boundary
+
+            if (
+                basket.x + basket.width >
+                canvas.width
+            ) {
+
+                basket.x =
+                    canvas.width -
+                    basket.width;
+
+            }
+
+        }
+
+
+        // ==========================================
+        // 10. UPDATE STARS
+        // ==========================================
+
+        function updateStars() {
+
+
+            for (
+                let i = stars.length - 1;
+                i >= 0;
+                i--
+            ) {
+
+                const star = stars[i];
+
+
+                // Move star downward
+
+                star.y =
+                    star.y + star.speed;
+
+
+                // Rotate star
+
+                star.rotation += 0.03;
+
+
+                // ==================================
+                // CHECK CATCH
+                // ==================================
+
+                if (
+
+                    star.y + star.size >= basket.y &&
+
+                    star.y - star.size <=
+                    basket.y + basket.height &&
+
+                    star.x >= basket.x &&
+
+                    star.x <=
+                    basket.x + basket.width
+
+                ) {
+
+                    // Remove star
+
+                    stars.splice(i, 1);
+
+
+                    // Increase score
+
+                    score++;
+
+
+                    scoreElement.textContent =
+                        score;
+
+
+                    // Increase speed every 10 points
+
+                    if (score % 10 === 0) {
+
+                        fallingSpeed += 0.4;
+
+                    }
+
+
+                    continue;
+
+                }
+
+
+                // ==================================
+                // CHECK MISSED STAR
+                // ==================================
+
+                if (
+                    star.y - star.size >
+                    canvas.height
+                ) {
+
+                    // Remove star
+
+                    stars.splice(i, 1);
+
+
+                    // Lose one life
+
+                    lives--;
+
+
+                    livesElement.textContent =
+                        lives;
+
+
+                    // Check game over
+
+                    if (lives <= 0) {
+
+                        endGame();
+
+                    }
+
+                }
+
+            }
+
+        }
+
+
+        // ==========================================
+        // 11. DRAW EVERYTHING
+        // ==========================================
+
+        function draw() {
+
+
+            // Clear canvas
+
+            ctx.clearRect(
+
+                0,
+
+                0,
+
+                canvas.width,
+
+                canvas.height
+
+            );
+
+
+            // Draw all stars
+
+            for (const star of stars) {
+
+                drawStar(star);
+
+            }
+
+
+            // Draw basket
+
+            drawBasket();
+
+        }
+
+
+        // ==========================================
+        // 12. MAIN GAME LOOP
+        // ==========================================
+
+        function gameLoop(currentTime) {
+
+
+            if (!gameRunning) {
+
+                return;
+
+            }
+
+
+            // Calculate time
+
+            const deltaTime =
+                currentTime - lastTime;
+
+
+            lastTime = currentTime;
+
+
+            // Update basket
+
+            updateBasket();
+
+
+            // Update stars
+
+            updateStars();
+
+
+            // Create stars
+
+            starTimer += deltaTime;
+
+
+            if (starTimer > 700) {
+
+                createStar();
+
+                starTimer = 0;
+
+            }
+
+
+            // Draw game
+
+            draw();
+
+
+            // Run again
+
+            requestAnimationFrame(gameLoop);
+
+        }
+
+
+        // ==========================================
+        // 13. KEYBOARD - KEY DOWN
+        // ==========================================
+
+        document.addEventListener(
+            "keydown",
+            function(event) {
+
+
+                if (event.key === "ArrowLeft") {
+
+                    leftPressed = true;
+
+                    event.preventDefault();
+
+                }
+
+
+                if (event.key === "ArrowRight") {
+
+                    rightPressed = true;
+
+                    event.preventDefault();
+
+                }
+
+            }
+        );
+
+
+        // ==========================================
+        // 14. KEYBOARD - KEY UP
+        // ==========================================
+
+        document.addEventListener(
+            "keyup",
+            function(event) {
+
+
+                if (event.key === "ArrowLeft") {
+
+                    leftPressed = false;
+
+                }
+
+
+                if (event.key === "ArrowRight") {
+
+                    rightPressed = false;
+
+                }
+
+            }
+        );
+
+
+        // ==========================================
+        // 15. MOUSE CONTROL
+        // ==========================================
+
+        canvas.addEventListener(
+            "mousemove",
+            function(event) {
+
+
+                if (!gameRunning) {
+
+                    return;
+
+                }
+
+
+                const rectangle =
+                    canvas.getBoundingClientRect();
+
+
+                const mouseX =
+                    event.clientX -
+                    rectangle.left;
+
+
+                basket.x =
+                    mouseX -
+                    basket.width / 2;
+
+
+                // Keep basket inside canvas
+
+                if (basket.x < 0) {
+
+                    basket.x = 0;
+
+                }
+
+
+                if (
+                    basket.x + basket.width >
+                    canvas.width
+                ) {
+
+                    basket.x =
+                        canvas.width -
+                        basket.width;
+
+                }
+
+            }
+        );
+
+
+        // ==========================================
+        // 16. GAME OVER
+        // ==========================================
+
+        function endGame() {
+
+
+            gameRunning = false;
+
+
+            finalScoreElement.textContent =
+                score;
+
+
+            gameOverElement.style.display =
+                "block";
+
+        }
+
+
+        // ==========================================
+        // 17. RESTART GAME
+        // ==========================================
+
+        function restartGame() {
+
+
+            score = 0;
+
+            lives = 3;
+
+            fallingSpeed = 2.5;
+
+            stars = [];
+
+            starTimer = 0;
+
+
+            basket.x = 350;
+
+
+            scoreElement.textContent =
+                score;
+
+            livesElement.textContent =
+                lives;
+
+
+            gameOverElement.style.display =
+                "none";
+
+
+            gameRunning = true;
+
+
+            lastTime = performance.now();
+
+
+            requestAnimationFrame(gameLoop);
+
+        }
+
+
+        // ==========================================
+        // 18. PLAY AGAIN BUTTON
+        // ==========================================
+
+        playAgainButton.addEventListener(
+            "click",
+            restartGame
+        );
+
+
+        // ==========================================
+        // 19. START THE GAME
+        // ==========================================
+
+        requestAnimationFrame(gameLoop);
+
+
+    </script>
+
+</body>
+
+</html>
